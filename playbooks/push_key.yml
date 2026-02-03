@@ -1,0 +1,8 @@
+- name: Push SSH Key to all servers
+  hosts: all
+  tasks:
+    - name: Add my public key to authorized_keys
+      authorized_key:
+        user: awx  # 키를 심을 계정
+        state: present
+        key: "{{ lookup('file', '~/.ssh/awx_servers.pub') }}"
