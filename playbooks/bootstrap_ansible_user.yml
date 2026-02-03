@@ -1,31 +1,36 @@
-- name: Bootstrap automation account
+- name: Bootstrap ansible automation account
   hosts: all
   become: true
+  gather_facts: false
+
+  vars:
+    ansible_user_name: ansible
 
   tasks:
     - name: Create ansible user
       user:
-        name: ansible
+        name: "{{ ansible_user_name }}"
         shell: /bin/bash
         groups: sudo
         append: yes
 
     - name: Create .ssh directory
       file:
-        path: /home/ansible/.ssh
+        path: "/home/{{ ansible_user_name }}/.ssh"
         state: directory
-        owner: ansible
-        group: ansible
+        owner: "{{ ansible_user_name }}"
+        group: "{{ ansible_user_name }}"
         mode: '0700'
 
-    - name: Deploy AWX public key
+    - name: Add AWX public key to ansible user
       authorized_key:
-        user: ansible
-        key: "{{ lookup('file', 'files/awx_key.pub') }}"
+        user: "{{ ansible_user_name }}"
+        key: "{{ ssh_pub_key }}"
+        state: present
 
-    - name: Allow passwordless sudo
+    - name: Allow passwordless sudo for ansible
       copy:
-        dest: /etc/sudoers.d/ansible
-        content: "ansible ALL=(ALL) NOPASSWD:ALL"
+        dest: "/etc/sudoers.d/{{ ansible_user_name }}"
+        content: "{{ ansible_user_name }} ALL=(ALL) NOPASSWD:ALL\n"
         mode: '0440'
 
