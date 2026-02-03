@@ -1,45 +1,67 @@
-- name: Provision a new user on all servers
+- name: Provision local user on all servers
   hosts: all
   become: true
   gather_facts: false
 
   vars:
-    # Survey/Extra Vars로 받는 값들
-    new_user: "{{ new_user }}"
-    new_user_pubkey: "{{ new_user_pubkey | default('') }}"
-    new_user_groups: "{{ new_user_groups | default(['sudo']) }}"
+    target_user: "{{ new_user }}"
+    target_password: "{{ new_user_password }}"
+    target_pubkey: "{{ new_user_pubkey | default('') }}"
     sudo_nopasswd: "{{ sudo_nopasswd | default(false) }}"
 
+  pre_tasks:
+    - name: Validate required inputs (from Survey)
+      ansible.builtin.assert:
+        that:
+          - target_user is defined
+          - target_user | length > 0
+          - target_password is defined
+          - target_password | length > 0
+        fail_msg: >
+          Survey 값이 누락됐습니다. new_user / new_user_password가 Template Survey에서
+          변수명 그대로 넘어오는지 확인하세요.
+
   tasks:
-    - name: Create user (with home)
+    - name: Create user with home directory
       ansible.builtin.user:
-        name: "{{ new_user }}"
+        name: "{{ target_user }}"
         shell: /bin/bash
         create_home: true
-        groups: "{{ new_user_groups }}"
-        append: true
         state: present
 
-    # 비밀번호 로그인까지 열어야 하면(회사 정책에 따라)
-    - name: Set password (optional)
+    - name: Set user password (hashed)
       ansible.builtin.user:
-        name: "{{ new_user }}"
-        password: "{{ new_user_password_hash }}"
-      when: new_user_password_hash is defined and new_user_password_hash | length > 0
+        name: "{{ target_user }}"
+        password: "{{ target_password | password_hash('sha512') }}"
+        update_password: always
 
-    - name: Install SSH public key (optional)
-      ansible.posix.authorized_key:
-        user: "{{ new_user }}"
-        key: "{{ new_user_pubkey }}"
-        state: present
-      when: new_user_pubkey | length > 0
+    - name: Ensure user is in sudo group
+      ansible.builtin.user:
+        name: "{{ target_user }}"
+        groups: sudo
+        append: true
 
-    - name: Configure sudoers for user (optional nopasswd)
+    - name: Configure sudoers (optional NOPASSWD)
       ansible.builtin.copy:
-        dest: "/etc/sudoers.d/{{ new_user }}"
-        content: "{{ new_user }} ALL=(ALL) {{ 'NOPASSWD:ALL' if sudo_nopasswd else 'ALL' }}\n"
+        dest: "/etc/sudoers.d/{{ target_user }}"
+        content: "{{ target_user }} ALL=(ALL) {{ 'NOPASSWD:ALL' if sudo_nopasswd else 'ALL' }}\n"
         owner: root
         group: root
         mode: "0440"
-      when: "'sudo' in new_user_groups"
+
+    - name: Ensure .ssh directory exists (optional)
+      ansible.builtin.file:
+        path: "/home/{{ target_user }}/.ssh"
+        state: directory
+        owner: "{{ target_user }}"
+        group: "{{ target_user }}"
+        mode: "0700"
+      when: target_pubkey | length > 0
+
+    - name: Install SSH public key (optional)
+      ansible.posix.authorized_key:
+        user: "{{ target_user }}"
+        key: "{{ target_pubkey }}"
+        state: present
+      when: target_pubkey | length > 0
 
