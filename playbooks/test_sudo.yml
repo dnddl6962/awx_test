@@ -1,0 +1,20 @@
+- name: Test login and sudo
+  hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Show whoami (after become)
+      command: whoami
+      register: r
+
+    - debug:
+        var: r.stdout
+
+    - name: Show sudoable check
+      command: id
+      register: r2
+
+    - debug:
+        var: r2.stdout
+

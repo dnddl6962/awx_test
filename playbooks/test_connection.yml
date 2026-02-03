@@ -1,0 +1,23 @@
+- name: Test SSH login and sudo access
+  hosts: all
+  become: true
+  gather_facts: false
+
+  tasks:
+    - name: Who am I before sudo
+      command: whoami
+      register: before_sudo
+
+    - name: Show user before sudo
+      debug:
+        var: before_sudo.stdout
+
+    - name: Who am I after sudo
+      command: whoami
+      become: true
+      register: after_sudo
+
+    - name: Show user after sudo
+      debug:
+        var: after_sudo.stdout
+
