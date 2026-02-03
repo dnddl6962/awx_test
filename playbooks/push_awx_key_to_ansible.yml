@@ -1,0 +1,30 @@
+- name: Push AWX public key to existing ansible user
+  hosts: all
+  become: true
+  gather_facts: false
+
+  vars:
+    target_user: ansible
+
+  tasks:
+    - name: Ensure .ssh directory exists
+      ansible.builtin.file:
+        path: "/home/{{ target_user }}/.ssh"
+        state: directory
+        owner: "{{ target_user }}"
+        group: "{{ target_user }}"
+        mode: "0700"
+
+    - name: Install AWX public key into ansible authorized_keys
+      ansible.builtin.authorized_key:
+        user: "{{ target_user }}"
+        key: "{{ ssh_pub_key }}"
+        state: present
+
+    - name: Ensure correct permissions on authorized_keys
+      ansible.builtin.file:
+        path: "/home/{{ target_user }}/.ssh/authorized_keys"
+        owner: "{{ target_user }}"
+        group: "{{ target_user }}"
+        mode: "0600"
+
