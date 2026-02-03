@@ -1,0 +1,25 @@
+- name: Base OS update and essential packages
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Upgrade all packages to latest
+      apt:
+        upgrade: dist
+
+    - name: Install essential packages
+      apt:
+        name:
+          - vim
+          - curl
+          - wget
+          - htop
+          - net-tools
+          - unzip
+        state: present
+

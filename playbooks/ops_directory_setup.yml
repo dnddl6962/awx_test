@@ -1,0 +1,29 @@
+- name: Create standard ops directories
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Create /data directory
+      file:
+        path: /data
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Create /data/logs directory
+      file:
+        path: /data/logs
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Create /data/backups directory
+      file:
+        path: /data/backups
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
