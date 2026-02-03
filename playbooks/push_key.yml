@@ -5,4 +5,4 @@
       authorized_key:
         user: awx  # 키를 심을 계정
         state: present
-        key: "{{ lookup('file', '~/.ssh/awx_servers.pub') }}"
+        key: "{{ lookup('file', '~/.ssh/id_ed25519_servers.pub') }}"
