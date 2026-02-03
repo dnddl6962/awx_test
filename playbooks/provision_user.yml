@@ -1,0 +1,45 @@
+- name: Provision a new user on all servers
+  hosts: all
+  become: true
+  gather_facts: false
+
+  vars:
+    # Survey/Extra Vars로 받는 값들
+    new_user: "{{ new_user }}"
+    new_user_pubkey: "{{ new_user_pubkey | default('') }}"
+    new_user_groups: "{{ new_user_groups | default(['sudo']) }}"
+    sudo_nopasswd: "{{ sudo_nopasswd | default(false) }}"
+
+  tasks:
+    - name: Create user (with home)
+      ansible.builtin.user:
+        name: "{{ new_user }}"
+        shell: /bin/bash
+        create_home: true
+        groups: "{{ new_user_groups }}"
+        append: true
+        state: present
+
+    # 비밀번호 로그인까지 열어야 하면(회사 정책에 따라)
+    - name: Set password (optional)
+      ansible.builtin.user:
+        name: "{{ new_user }}"
+        password: "{{ new_user_password_hash }}"
+      when: new_user_password_hash is defined and new_user_password_hash | length > 0
+
+    - name: Install SSH public key (optional)
+      ansible.posix.authorized_key:
+        user: "{{ new_user }}"
+        key: "{{ new_user_pubkey }}"
+        state: present
+      when: new_user_pubkey | length > 0
+
+    - name: Configure sudoers for user (optional nopasswd)
+      ansible.builtin.copy:
+        dest: "/etc/sudoers.d/{{ new_user }}"
+        content: "{{ new_user }} ALL=(ALL) {{ 'NOPASSWD:ALL' if sudo_nopasswd else 'ALL' }}\n"
+        owner: root
+        group: root
+        mode: "0440"
+      when: "'sudo' in new_user_groups"
+
